@@ -180,7 +180,7 @@ int main (int argc, char **argv) {
 		} else if(protocolFlag == 1) { //? UDP
 			printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
 			
-			while (1) { //? Boucle infinie de déception de messages
+			while (1) { //? Boucle infinie de réception de messages
 				retcode = recv(socket,buffer,BUFFER_SIZE,0); // reception du message (pas besoin de recvfrom car pas de retour)
 				errorManager(retcode, "Erreur de reception", -1);
 
