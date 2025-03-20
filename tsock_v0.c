@@ -52,10 +52,14 @@ int createSocket(int sockType) {// sock
 }
 
 // Fonction pour construire un message correspondance fonction construire_message()
-void buildMessage(char *message, char motif, int lg) {
-	int i;
-	for (i = 0; i < lg; i++)
-		message[i] = motif;
+void buildMessage(int num, char *message, char motif, int lg) {
+	// Insérer le numéro du message en ASCII sur 5 caractères
+	sprintf(message, "%5d", num);  //"   1" -> "----1"
+	for (int i = 0; i < 5; i++) {
+			if (message[i] == ' ') message[i] = '-';
+	}
+	memset(message + 5, motif, lg - 5); // Remplir le reste du message avec le motif
+	message[lg] = '\0'; // Ajout du caractère de fin de chaîne pour éviter les erreurs
 }
 
 // Fonction pour afficher un message correspondance fonction afficher_message()
@@ -73,14 +77,16 @@ int main (int argc, char **argv) {
 	int c;
 	extern char *optarg;
 	extern int optind;
-	int nb_message = -1; // Nb de messages à envoyer ou à recevoir, par défaut : 10 en émission, infini en réception
-	int source = -1 ; // 0=puits, 1=source
-	int protocolFlag = 0; // 0=TCP, 1=UDP
 	const char* IP= "127.0.0.1";
 	int PORT = 9000;
 	char buffer[BUFFER_SIZE];
-	ssize_t dataClientSize;
 	int retcode; // code de retour des fonctions pour tester les erreurs
+
+	int messageNb = -1; // Nb de messages à envoyer ou à recevoir, par défaut : 10 en émission, infini en réception
+	//TODO ici le 30 représente la longueur, modifier pour -l
+	int messageLen = 30;
+	int source = -1 ; // 0=puits, 1=source
+	int protocolFlag = 0; // 0=TCP, 1=UDP default TCP
 
 	//! |=====================|
 	//! |__PARSING ARGUMENTS__|
@@ -102,10 +108,15 @@ int main (int argc, char **argv) {
 				source = 1;
 				IP = argv[argc-2];
 				PORT = atoi(argv[argc-1]);
+				messageNb = 10; // Valeur par défaut
 				break;
 
-			case 'n': // nombre de messages
-				nb_message = atoi(optarg);
+			case 'n': //TODO nombre de messages
+				messageNb = atoi(optarg);
+				break;
+
+			case 'l': //TODO longueur du message
+				messageLen = atoi(optarg);
 				break;
 
 			case 'u': // UDP
@@ -139,28 +150,24 @@ int main (int argc, char **argv) {
 		//! |====================|
 		//! |___SOURCE(CLIENT)___|
 		//* Construction du message
-		//TODO ici le 30 représente la longueur, modifier pour -l
-		char message[30];
-		nb_message = 2;
-		printf("SOURCE : lg_mesg_emis=30, port=9000, nb_envois=%d, TP=udp, dest=gauthier\n", nb_message);
+		char message[messageLen];
+		printf("SOURCE : lg_mesg_emis=%d, port=%d, nb_envois=%d, TP=%s, dest=%s\n", messageLen, PORT, messageNb, protocolFlag==0?"tcp":"udp", IP);
 
-		for(int i = 0; i < nb_message; i++) {
-			buildMessage(message, 'a'+i, 30);
-			//TODO formater correctement et envoyer chaque message
-			// sprintf("");
-		}
-
-		//* Envoi du message avec le bon protocole
-		if (protocolFlag == 0) { //? TCP
+		for(int i = 0; i < messageNb; i++) {
+			buildMessage(i+1, message, 'a'+i, sizeof(message));
+			printf("SOURCE : Envoi n°%d (%ld) [%s]\n", i+1, sizeof(message), message);
 			
-		} else if(protocolFlag == 1) { //? UDP
-			retcode = sendto(socket, message, strlen(message), 0, (struct sockaddr *)&adress, sizeof(adress));
-			errorManager(retcode, "Erreur d'envoi", -1);	
+			//* Envoi du message avec le bon protocole
+			if (protocolFlag == 0) { //? TCP
+				
+			} else if(protocolFlag == 1) { //? UDP
+				retcode = sendto(socket, message, strlen(message), 0, (struct sockaddr *)&adress, sizeof(adress));
+				errorManager(retcode, "Erreur d'envoi du message source vers le puits", -1);	
+			}
 		}
-
+		printf("SOURCE : fin\n");
 		//* Fermeture du socket
 		close(socket);
-		
 	} else if(source == 0){
 		//! |==================|
 		//! |__PUITS(SERVER)___|
@@ -171,21 +178,35 @@ int main (int argc, char **argv) {
 		if (protocolFlag == 0) { //? TCP
 			
 		} else if(protocolFlag == 1) { //? UDP
-			dataClientSize = recv(socket,buffer,BUFFER_SIZE,0);
-			errorManager(dataClientSize, "Erreur de reception", -1);
-			printf("SOURCE : lg_mesg_emis=30, port=%d, nb_envois=a faire, TP=udp, dest=a faire", PORT);
-			printf("Réponse du serveur : %s\n", buffer); // Affichage du message reçu
+			printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
+			
+			while (1) { //? Boucle infinie de déception de messages
+				retcode = recv(socket,buffer,BUFFER_SIZE,0); // reception du message (pas besoin de recvfrom car pas de retour)
+				errorManager(retcode, "Erreur de reception", -1);
+
+				char numStr[6];
+				strncpy(numStr, buffer, 5);  // Copie les 5 premiers caractères (numéro)
+				numStr[5] = '\0';
+				//retirer les -
+				for (int i = 0; i < 5; i++) {
+					if (numStr[i] == '-') numStr[i] = ' ';
+				}
+				int messageNumber = atoi(numStr);  // Convertir la chaîne en entier
+				
+				printf("PUITS : Reception n°%d (%ld) [%s]\n", messageNumber, strlen(buffer), buffer);
+			}
+			
 		}
 	}
 
-	if (nb_message != -1) {
+	if (messageNb != -1) {
 		if (source == 1)
-			printf("nb de tampons à envoyer : %d\n", nb_message);
+			printf("nb de tampons à envoyer : %d\n", messageNb);
 		else
-			printf("nb de tampons à recevoir : %d\n", nb_message);
+			printf("nb de tampons à recevoir : %d\n", messageNb);
 	} else {
 		if (source == 1) {
-			nb_message = 10 ;
+			messageNb = 10 ;
 			printf("nb de tampons à envoyer = 10 par défaut\n");
 		} else
 		printf("nb de tampons à envoyer = infini\n");
