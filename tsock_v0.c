@@ -141,6 +141,7 @@ int main (int argc, char **argv) {
 	//! |=====================|
 	//! |___SOCKET_CREATION___|
   struct sockaddr_in adress = createAdress(PORT, IP);
+  socklen_t adressLen = sizeof(adress);
   int socket;
 
 	//? en premier if TCP, en deuxieme if UDP
@@ -159,7 +160,10 @@ int main (int argc, char **argv) {
 			
 			//* Envoi du message avec le bon protocole
 			if (protocolFlag == 0) { //? TCP
-				
+				retcode=connect(socket,(struct sockaddr*)&adress,sizeof(adress));
+				errorManager(retcode, "Erreur de connection!", -1);	
+				retcode=send(socket, message, strlen(message), 0);
+				errorManager(retcode, "Erreur d'envoi!", -1);	
 			} else if(protocolFlag == 1) { //? UDP
 				retcode = sendto(socket, message, strlen(message), 0, (struct sockaddr *)&adress, sizeof(adress));
 				errorManager(retcode, "Erreur d'envoi du message source vers le puits", -1);	
@@ -176,7 +180,30 @@ int main (int argc, char **argv) {
 		errorManager(retcode, "Erreur de bind", -1);
 
 		if (protocolFlag == 0) { //? TCP
-			
+			printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
+			//notre socket crée tte a lheure devient un socket d'ecoute:
+			retcode=listen(socket, 5);
+			errorManager(retcode, "Erreur lors de la mise en ecoute", -1);
+			//acceptation de la connexion(on est en TCP): nous retourne un nouveau socket
+			int socketCom=accept(socket, (struct sockaddr*)&adress, &adressLen);
+			errorManager(socketCom, "Erreur: connection non acceptée", -1);
+			//reception de la data dans buffer
+			retcode=recv(socketCom,buffer,BUFFER_SIZE,0);
+			errorManager(retcode, "Erreur de reception", -1);
+			close(socketCom);
+			close(socket);
+			char numStr[6];
+				strncpy(numStr, buffer, 5);  // Copie les 5 premiers caractères (numéro)
+				numStr[5] = '\0';
+				//retirer les -
+				for (int i = 0; i < 5; i++) {
+					if (numStr[i] == '-') numStr[i] = ' ';
+				}
+				int messageNumber = atoi(numStr);  // Convertir la chaîne en entier
+				
+				printf("PUITS : Reception n°%d (%ld) [%s]\n", messageNumber, strlen(buffer), buffer);
+
+
 		} else if(protocolFlag == 1) { //? UDP
 			printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
 			
