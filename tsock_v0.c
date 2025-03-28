@@ -146,6 +146,7 @@ int main (int argc, char **argv) {
 
 	//? en premier if TCP, en deuxieme if UDP
 	socket = (protocolFlag == 0 ? createSocket(SOCK_STREAM) : createSocket(SOCK_DGRAM));
+
 	if(source == 1){
 		//! |====================|
 		//! |___SOURCE(CLIENT)___|
@@ -158,51 +159,57 @@ int main (int argc, char **argv) {
 			printf("SOURCE : Envoi n°%d (%ld) [%s]\n", i+1, sizeof(message), message);
 			
 			//* Envoi du message avec le bon protocole
-			if (protocolFlag == 0) {  // Si le protocole est TCP
-   				 // Connexion au serveur
-   				 retcode = connect(socket, (struct sockaddr*)&adress, sizeof(adress));
-  				  errorManager(retcode, "Erreur de connexion!", -1);  // Vérifie si la connexion a échoué
-    
-   				 // Construction et envoi du message
-   				 retcode = send(socket, message, strlen(message), 0);
-   				 errorManager(retcode, "Erreur d'envoi!", -1);  // Vérifie si l'envoi a échoué
-    
-   				 // Une fois le message envoyé, vous pouvez fermer le socket
-    			close(socket);
-			}else if(protocolFlag == 1) { //? UDP
+			if (protocolFlag == 0) {  //? CLIENT TCP
+				// Connexion au serveur
+				retcode = connect(socket, (struct sockaddr*)&adress, sizeof(adress));
+				errorManager(retcode, "Erreur de connexion!", -1); 
+
+				//si co acceptée, envoi du message
+				retcode = send(socket, message, strlen(message), 0);
+				errorManager(retcode, "Erreur d'envoi!", -1);
+
+			} else if(protocolFlag == 1) { //? CLIENT UDP
 				retcode = sendto(socket, message, strlen(message), 0, (struct sockaddr *)&adress, sizeof(adress));
 				errorManager(retcode, "Erreur d'envoi du message source vers le puits", -1);	
 			}
-			
 		}
 		printf("SOURCE : fin\n");
-		//* Fermeture du socket
-		close(socket);
+		//* Fermeture du socket dans les deux cas
+		close(socket); //! fin du client
+		
 	} else if(source == 0){
 		//! |==================|
 		//! |__PUITS(SERVER)___|
-		//TODO
 		retcode = bind(socket,(struct sockaddr*)&adress,sizeof(adress)); // bind de notre socket
 		errorManager(retcode, "Erreur de bind", -1);
 
-		if (protocolFlag == 0) { //? TCP
-			printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
+		printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
+		
+		if (protocolFlag == 0) { //? PUITS TCP
 			//notre socket crée tte a lheure devient un socket d'ecoute:
-			retcode=listen(socket, 5);
+			retcode = listen(socket, 5);
 			errorManager(retcode, "Erreur lors de la mise en ecoute", -1);
+			printf("PUITS : En attente de connexion sur %d...\n", PORT);
+			
 			//acceptation de la connexion(on est en TCP): nous retourne un nouveau socket
-			
-			int socketCom=accept(socket, (struct sockaddr*)&adress, &adressLen);
-			//reception de la data dans buffer
-			retcode=recv(socketCom,buffer,BUFFER_SIZE,0);
-			errorManager(retcode, "Erreur de reception", -1);
-			close(socketCom);
-			
-	
+			int socketCom = accept(socket, (struct sockaddr*)&adress, &adressLen);
+			errorManager(socketCom, "Erreur d'acceptation de la connexion", -1);
 
-		} else if(protocolFlag == 1) { //? UDP
-			printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=infini, TP=%s\n", messageLen, PORT, protocolFlag==0?"tcp":"udp");
-			
+			while(1){
+				retcode = recv(socketCom,buffer,BUFFER_SIZE,0);
+				errorManager(retcode, "Erreur de reception", -1);
+				char numStr[6];
+				strncpy(numStr, buffer, 5);  // Copie les 5 premiers caractères (numéro)
+				numStr[5] = '\0';
+				//retirer les -
+				for (int i = 0; i < 5; i++) {
+					if (numStr[i] == '-') numStr[i] = ' ';
+				}
+			}
+			close(socketCom);
+
+
+		} else if(protocolFlag == 1) { //? PUITS UDP
 			while (1) { //? Boucle infinie de réception de messages
 				retcode = recv(socket,buffer,BUFFER_SIZE,0); // reception du message (pas besoin de recvfrom car pas de retour)
 				errorManager(retcode, "Erreur de reception", -1);
@@ -218,10 +225,10 @@ int main (int argc, char **argv) {
 				
 				printf("PUITS : Reception n°%d (%ld) [%s]\n", messageNumber, strlen(buffer), buffer);
 			}
-			
 		}
 	}
 
+	// Affichage du nombre de messages à envoyer ou à recevoir
 	if (messageNb != -1) {
 		if (source == 1)
 			printf("nb de tampons à envoyer : %d\n", messageNb);
