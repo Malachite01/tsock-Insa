@@ -91,7 +91,7 @@ int main (int argc, char **argv) {
 	const char* IP= "127.0.0.1";
 	int PORT = 9000;
 	int retcode; // code de retour des fonctions pour tester les erreurs
-
+	char buffer[BUFFER_SIZE]; // buffer de reception (on ne peut pas faire la taille messageNb*messageLen car des fois messageNb = -1)
 	int messageNb = -1; // Nb de messages à envoyer ou à recevoir, par défaut : 10 en émission, infini en réception
 	int messageLen = 30;
 	int source = -1 ; // 0=puits, 1=source
@@ -134,10 +134,7 @@ int main (int argc, char **argv) {
 		}
 	}
 	if (source == -1) usage(); // Debug
-  
 
-	// Initialisation du buffer
-	char buffer[messageLen*messageNb];
 
 	//! |=====================|
 	//! |___SOCKET_CREATION___|
