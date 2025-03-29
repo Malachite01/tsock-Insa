@@ -206,11 +206,14 @@ int main (int argc, char **argv) {
 			printf("PUITS : Connexion TCP acceptée avec %s\n", ip);
 
 			//reception et affichage des messages TCP
-			int receivedBytes = 0;
-			while ((receivedBytes = recv(socketTcp, buffer, messageLen, 0)) > 0) {
-				buffer[receivedBytes] = '\0'; //terminaison de la chaîne
-				printMessage(buffer, receivedBytes);
-				memset(buffer, 0, messageLen); //nettoyer le buffer
+			int receivedBytes = 0; // Nombre d'octets reçus
+			int receivedCount = 0; // Compteur de messages reçus
+			while ((messageNb == -1 || receivedCount < messageNb) && 
+						(receivedBytes = recv(socketTcp, buffer, messageLen, 0)) > 0) {
+					buffer[receivedBytes] = '\0'; // Terminaison de la chaîne
+					printMessage(buffer, receivedBytes);
+					memset(buffer, 0, messageLen); // Nettoyage du buffer
+					receivedCount++;
 			}
 
 			if (receivedBytes == 0) {
