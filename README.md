@@ -1,4 +1,4 @@
-# README - Projet tsock INSA Toulouse
+# Projet tsock INSA Toulouse
 
 ## Description
 
@@ -70,10 +70,14 @@ Les messages envoyés sont structurés comme suit :
 ## Installation et utilisation
 
 1. Clonez ou téléchargez le projet sur votre machine locale.
-2. Compilez le programme avec `gcc` :
+2. Compilez le programme avec `gcc` ou `make` (qui utilisera le Makefile fourni):
 
    ```bash
    gcc -o tsock tsock.c
+   ```
+   ou
+   ```bash
+   make
    ```
 
 3. Lancez l'application en mode source ou puits selon vos besoins.
