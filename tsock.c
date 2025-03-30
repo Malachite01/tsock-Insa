@@ -193,7 +193,7 @@ int main (int argc, char **argv) {
 
 		char receptionNb[messageNb+1]; //Convertir messageNb en char* pour l'affichage
 		sprintf(receptionNb, "%d", messageNb);
-		printf("PUITS : lg_mesg_emis=%d, port=%d, nb_reception=%s, TP=%s\n", messageLen, PORT, messageNb==-1?"infini":receptionNb, protocolFlag==0?"tcp":"udp");
+		printf("PUITS : lg_mesg_lu=%d, port=%d, nb_reception=%s, TP=%s\n", messageLen, PORT, messageNb==-1?"infini":receptionNb, protocolFlag==0?"tcp":"udp");
 		
 		if (protocolFlag == 0) { //? PUITS TCP
 			//notre socket créé tte a lheure devient un socket d'ecoute
