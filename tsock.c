@@ -70,6 +70,7 @@ void printMessage(char *buffer, int lg, int messageNumber) {
 	char message[lg + 1];  // +1 pour le '\0'
 	strncpy(message, buffer, lg);
 	message[lg] = '\0';  // Ajout du caractère de fin de chaîne
+	// printf("debug: %s\n", message);
 	// Affichage avec le bon format (préserve les espaces et le numéro)
 	printf("PUITS : Réception n°%d (%ld) [%s]\n", messageNumber, strlen(buffer), message);
 }
@@ -90,7 +91,6 @@ int main (int argc, char **argv) {
 	int messageLen = 30; // longueur des messages: par defaut 30
 	int source = -1 ; // 0=puits, 1=source
 	int protocolFlag = 0; // 0=TCP, 1=UDP default TCP
-  int bufferSize=30; // taille du buffer par defaut (30) pour 1 message de 30 octets
 
 	//! |=====================|
 	//! |__PARSING ARGUMENTS__|
@@ -140,12 +140,9 @@ int main (int argc, char **argv) {
   int socket;
 	socket = (protocolFlag == 0 ? createSocket(SOCK_STREAM) : createSocket(SOCK_DGRAM));
 	
-  // gestion de la taille du buffer dans le cas ou messageNb est changé (-n)
-  if(messageNb>=0){
-    bufferSize=messageLen;
-  }
   //creation de notre buffer 
-  char buffer[bufferSize];
+  char *buffer = malloc(sizeof(char)*messageLen + 1); // +1 pour le \0
+	errorManager(buffer == NULL, "Erreur d'allocation de mémoire pour le buffer", -1); // allocation du buffer
 
   //! |====================|
 	//! |___SOURCE(CLIENT)___|
