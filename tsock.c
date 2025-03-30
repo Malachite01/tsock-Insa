@@ -11,15 +11,14 @@
 #include <netdb.h> /* structures retournées par les fonctions de gestion de la base de données du réseau */
 #include <stdio.h> /* pour les entrées/sorties */
 #include <errno.h> /* pour la gestion des erreurs */
-#include <arpa/inet.h>
+#include <arpa/inet.h>//TODO expliquer a quoi sert ce .h
 
-#define BUFFER_SIZE 4096
 
 //! |================|
 //! |__TOOLBOX FUNC__|
 // Fonction erreur usage
 void usage() {
-	printf("usage: cmd [-p|-s][-u][-n ##][-l ##]\n");
+	printf("usage: cmd [-p|-s][-u][-n ##][-l ##]\n -p: option puit  -s option source \n -u: choix du protocole UDP(défaut TCP) \n -n: nombre de messages a envoyer ou recevoir -l: longueur des messages a envoyer ou recevoir ");
 	exit(1);
 }
 
@@ -35,7 +34,7 @@ void errorManager(int code, char *msg, int codeError) {
 struct sockaddr_in createAdress(int port, const char* IP) {
 	struct sockaddr_in adress;
 	adress.sin_family = AF_INET; //internet
-	adress.sin_port = htons(port); //htons pour verifier little endian big endian
+	adress.sin_port = htons(port); //htons pour convertir au format correspondant a notre machine(big endian/little endian)
 	adress.sin_addr.s_addr = inet_addr(IP); //inet addr
 	return adress;
 }
@@ -62,9 +61,10 @@ void buildMessage(int num, char *message, char motif, int lg) {
 	message[lg] = '\0'; // Ajout du caractère de fin de chaîne pour éviter les erreurs
 }
 
+
 // Fonction pour afficher un message (correspondance fonction afficher_message())
 void printMessage(char *buffer, int lg) {
-	char numStr[6];  // 5 chars for the number + 1 for '\0'
+	char numStr[6];  // 5 char pour le chiffre et un de plus pour le \0
 	strncpy(numStr, buffer, 5);
 	numStr[5] = '\0';  // Ensure null termination
 
@@ -88,15 +88,14 @@ int main (int argc, char **argv) {
 	int c;
 	extern char *optarg;
 	extern int optind;
-	const char* IP= "127.0.0.1";
-	int PORT = 9000;
+  char* IP= "127.0.0.1";// IP par defaut 
+	int PORT = 9000;//port par défaut
 	int retcode; // code de retour des fonctions pour tester les erreurs
-	char buffer[BUFFER_SIZE]; // buffer de reception (on ne peut pas faire la taille messageNb*messageLen car des fois messageNb = -1)
 	int messageNb = -1; // Nb de messages à envoyer ou à recevoir, par défaut : 10 en émission, infini en réception
-	int messageLen = 30;
+	int messageLen = 30; // longueur des messages: par defaut 30
 	int source = -1 ; // 0=puits, 1=source
 	int protocolFlag = 0; // 0=TCP, 1=UDP default TCP
-
+  int bufferSize=300;
 	//! |=====================|
 	//! |__PARSING ARGUMENTS__|
 	// getopt permet de parser les options de la ligne de commande
@@ -139,21 +138,30 @@ int main (int argc, char **argv) {
 	//! |=====================|
 	//! |___SOCKET_CREATION___|
   struct sockaddr_in adress = createAdress(PORT, IP);
-  socklen_t adressLen = sizeof(adress);
+  
+  socklen_t adressLen = sizeof(adress);// taille de l'adresse en type socklen_t
+  
   int socket;
 
 	//? en premier if TCP, en deuxieme if UDP
 	socket = (protocolFlag == 0 ? createSocket(SOCK_STREAM) : createSocket(SOCK_DGRAM));
+	
+  // gestion de la taille du buffer dans le cas ou messageNb est changé
+  if(messageNb>=0){
+    bufferSize=messageLen*messageNb;
+  }
 
-
-	//! |====================|
+  //creation de notre buffer 
+  char buffer[bufferSize];
+	
+  //! |====================|
 	//! |___SOURCE(CLIENT)___|
 	if(source == 1){
 		//* Construction du message
 		char message[messageLen];
 		printf("SOURCE : lg_mesg_emis=%d, port=%d, nb_envois=%d, TP=%s, dest=%s\n", messageLen, PORT, messageNb, protocolFlag==0?"tcp":"udp", IP);
 
-		if(protocolFlag == 0) { //? CO CLIENT TCP si TCP
+		if(protocolFlag == 0) { //? CO CLIENT TCP si protocol choisi TCP
 			// Connexion au serveur en mode TCP pour pas se connecter a chaque message
 			retcode = connect(socket, (struct sockaddr*)&adress, sizeof(adress));
 			errorManager(retcode, "Erreur de connexion!", -1); 
@@ -171,19 +179,20 @@ int main (int argc, char **argv) {
 				errorManager(retcode, "Erreur d'envoi du message TCP", -1);
 
 			} else if(protocolFlag == 1) { //? CLIENT UDP
-				retcode = sendto(socket, message, strlen(message), 0, (struct sockaddr *)&adress, sizeof(adress));
+        //envoi du message 
+				retcode = sendto(socket, message, strlen(message), 0, (struct sockaddr *)&adress, adressLen);
 				errorManager(retcode, "Erreur d'envoi du message UDP", -1);	
 			}
 		}
 		printf("SOURCE : fin\n");
 		//* Fermeture du socket dans les deux cas
 		close(socket); //! fin du client
-		
+
 
 	//! |==================|
 	//! |__PUITS(SERVER)___|
 	} else if(source == 0){
-		retcode = bind(socket,(struct sockaddr*)&adress,sizeof(adress)); // bind de notre socket
+		retcode = bind(socket,(struct sockaddr*)&adress,adressLen); // bind de notre socket(meme operation pour TCP ou UDP)
 		errorManager(retcode, "Erreur de bind", -1);
 
 		char receptionNb[messageNb+1]; //Convertir messageNb en char* pour l'affichage
@@ -207,8 +216,10 @@ int main (int argc, char **argv) {
 
 			//reception et affichage des messages TCP
 			int receivedBytes = 0; // Nombre d'octets reçus
-			int receivedCount = 0; // Compteur de messages reçus
-			while ((messageNb == -1 || receivedCount < messageNb) && 
+			int receivedCount = 0; // Compteur de messages reçu
+
+			// reception en continu tant que : messageNb est atteint OU que la connection se ferme ou que l'on ai une erreur 
+			while ((messageNb == -1 || receivedCount < messageNb) && 					
 						(receivedBytes = recv(socketTcp, buffer, messageLen, 0)) > 0) {
 					buffer[receivedBytes] = '\0'; // Terminaison de la chaîne
 					printMessage(buffer, receivedBytes);
