@@ -265,5 +265,6 @@ int main (int argc, char **argv) {
 			printf("nb de tampons à envoyer = infini\n");
 	}
 	
+	free(buffer); // Libération de la mémoire allouée pour le buffer
 	return 0;
 }
