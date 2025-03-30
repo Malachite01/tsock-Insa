@@ -1,4 +1,4 @@
-# Projet tsock INSA Toulouse
+# Projet tsock INSA Toulouse (tsock_v3 finalisé)
 
 ## Description
 
