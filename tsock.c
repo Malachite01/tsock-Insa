@@ -61,17 +61,19 @@ void buildMessage(int num, char *message, char motif, int lg) {
 
 
 // Fonction pour afficher un message (correspondance fonction afficher_message())
-void printMessage(char *buffer, int lg, int messageNumber) {
-	char numStr[6];  // 5 char pour le chiffre et un de plus pour le \0
-	strncpy(numStr, buffer, 5);
-	numStr[5] = '\0';
+void printMessage(char *buffer, int receivedLen, int messageNumber) {
+    // On extrait le numéro du message (les 5 premiers caractères)
+    char numStr[6];  
+    strncpy(numStr, buffer, 5);
+    numStr[5] = '\0';
 
-	// On copie l'intégralité du message, y compris le préfixe numérique
-	char message[lg + 1];  // +1 pour le '\0'
-	strncpy(message, buffer, lg);
-	message[lg] = '\0';  // Ajout du caractère de fin de chaîne
-	// Affichage avec le bon format (préserve les espaces et le numéro)
-	printf("PUITS : Réception n°%d (%ld) [%s]\n", messageNumber, strlen(buffer), message);
+    // On garde tout le message reçu, y compris les espaces
+    char message[receivedLen + 1];  
+    strncpy(message, buffer, receivedLen);
+    message[receivedLen] = '\0';  
+
+    // Affichage avec le bon format
+    printf("PUITS : Réception n°%d (%d) [%s]\n", messageNumber, receivedLen, message);
 }
 
 
