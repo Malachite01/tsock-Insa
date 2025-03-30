@@ -16,6 +16,9 @@ Le projet tsock consiste en une application permettant des échanges d'informati
 - `-u` : Utilise le protocole UDP. Par défaut, le programme utilise le protocole TCP.
 - `-n ##` : Définit le nombre de messages à envoyer (source) ou à recevoir (puits). Par défaut, 10 messages pour la source et infini pour le puits.
 - `-l ##` : Définit la longueur des messages à envoyer ou à recevoir. Par défaut, la longueur est de 30 octets.
+> [!WARNING]  
+> En mode puits(server), si le -l n'est pas spécifié, et que en mode source(client) le -l est spécifié et plus grand que 30, le puits(server) ne pourra pas recevoir la totalité du message, car le message est tronqué à 30 octets par défaut sans -l. (même fonctionnement que dans le programme tsock insa de base)
+
 
 ## Structure du programme
 

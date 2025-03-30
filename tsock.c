@@ -12,6 +12,7 @@
 #include <stdio.h> /* pour les entrées/sorties */
 #include <errno.h> /* pour la gestion des erreurs */
 #include <arpa/inet.h> /* pour la conversion d'adresses */
+#include <string.h> /* pour la gestion des chaînes de caractères */
 
 
 //! |================|
@@ -60,20 +61,17 @@ void buildMessage(int num, char *message, char motif, int lg) {
 
 
 // Fonction pour afficher un message (correspondance fonction afficher_message())
-void printMessage(char *buffer, int lg) {
+void printMessage(char *buffer, int lg, int messageNumber) {
 	char numStr[6];  // 5 char pour le chiffre et un de plus pour le \0
 	strncpy(numStr, buffer, 5);
 	numStr[5] = '\0';
-
-	int messageNumber = atoi(numStr);  // Convertir en int (permet de supprimer les espaces inutiles)
 
 	// On copie l'intégralité du message, y compris le préfixe numérique
 	char message[lg + 1];  // +1 pour le '\0'
 	strncpy(message, buffer, lg);
 	message[lg] = '\0';  // Ajout du caractère de fin de chaîne
-
 	// Affichage avec le bon format (préserve les espaces et le numéro)
-	printf("PUITS : Réception n°%d (%d) [%s]\n", messageNumber, lg, message);
+	printf("PUITS : Réception n°%d (%ld) [%s]\n", messageNumber, strlen(buffer), message);
 }
 
 
@@ -193,7 +191,7 @@ int main (int argc, char **argv) {
 
 		char receptionNb[messageNb+1]; //Convertir messageNb en char* pour l'affichage
 		sprintf(receptionNb, "%d", messageNb);
-		printf("PUITS : lg_mesg_lu=%d, port=%d, nb_reception=%s, TP=%s\n", messageLen, PORT, messageNb==-1?"infini":receptionNb, protocolFlag==0?"tcp":"udp");
+		printf("PUITS : lg_mesg_lu(buff_size)=%d, port=%d, nb_reception=%s, TP=%s\n", messageLen, PORT, messageNb==-1?"infini":receptionNb, protocolFlag==0?"tcp":"udp");
 		
 		if (protocolFlag == 0) { //? PUITS TCP
 			//notre socket créé tte a lheure devient un socket d'ecoute
@@ -220,7 +218,7 @@ int main (int argc, char **argv) {
 			while ((messageNb == -1 || receivedCount < messageNb) && 					
 						(receivedBytes = recv(socketTcp, buffer, messageLen, 0)) > 0) {
 					buffer[receivedBytes] = '\0'; // Terminaison de la chaîne
-					printMessage(buffer, receivedBytes);
+					printMessage(buffer, receivedBytes, receivedCount+1);
 					memset(buffer, 0, messageLen); // Nettoyage du buffer
 					receivedCount++;
 			}
@@ -242,7 +240,7 @@ int main (int argc, char **argv) {
 				retcode = recv(socket, buffer, messageLen, 0); // reception du message (pas besoin de recvfrom car pas de retour)
 				errorManager(retcode, "Erreur de reception", -1);
 				// Affichage du message reçu
-				printMessage(buffer, messageLen);
+				printMessage(buffer, messageLen, i+1);
 				//on clear le buffer(remplissage avec des 0)
 				memset(buffer, 0, messageLen);
 			}
