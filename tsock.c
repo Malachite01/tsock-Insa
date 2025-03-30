@@ -162,6 +162,9 @@ int main (int argc, char **argv) {
 
 		//* Boucle d'envoi des messages (utilisée pour TCP et UDP)
 		for(int i = 0; i < messageNb; i++) {
+			// Reinitialisation du message
+			memset(message, 0, sizeof(message)); // Remplissage du message avec des 0
+
 			// Construction du message avec le bon motif (%26 pour 26 lettres de l'alphabet)
 			buildMessage(i+1, message, 'a'+i%26, sizeof(message));
 			printf("SOURCE : Envoi n°%d (%ld) [%s]\n", i+1, sizeof(message), message);
